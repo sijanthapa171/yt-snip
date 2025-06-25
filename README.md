@@ -1,25 +1,44 @@
-# YouTube Downloader
+# yt-snip
 
-Simple C++ tool to download and trim YouTube videos/audio.
-in other words just a yt dlp wrapper
+Fast YouTube video/audio downloader and trimmer - a yt-dlp wrapper.
 
-## What you need
-- `yt-dlp` 
-- `ffmpeg`
-- C++17 compiler
+## Install
 
-## Build & Run
+**From AUR:**
 ```bash
-g++ -std=c++17 -o youtube_downloader main.cc
-./youtube_downloader
+yay -S yt-snip
 ```
 
-## Options
-1. Download full video
-2. Download audio only  
-3. Trim video
-4. Trim audio
+**From source:**
+```bash
+git clone https://github.com/melqtx/yt-snip.git
+cd yt-snip
+make
+sudo make install
+```
 
-Use time format like `00:01:30` or `90` for trimming.
+## Usage
 
-Output files: `output.webm`, `output.opus`
+```bash
+# Download full video
+yt-snip video "https://youtube.com/watch?v=VIDEO_ID"
+
+# Download audio only
+yt-snip audio "https://youtube.com/watch?v=VIDEO_ID"
+
+# Download and trim video (1:30 to 3:45)
+yt-snip trim-video "https://youtube.com/watch?v=VIDEO_ID" "00:01:30" "00:03:45"
+
+# Download and trim audio (90s to 180s)
+yt-snip trim-audio "https://youtube.com/watch?v=VIDEO_ID" "90" "180"
+```
+
+## Dependencies
+
+- `yt-dlp`
+- `ffmpeg`
+
+## Output
+
+- Videos: `output.webm`
+- Audio: `output.opus`
