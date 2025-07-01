@@ -1,0 +1,3 @@
+# Ignore video and audio directories
+video/
+audio/
