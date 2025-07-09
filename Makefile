@@ -1,20 +1,32 @@
-CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -O2
-TARGET = yt-snip
-SOURCE = main.cc
+# Makefile for yt-snip using CMake
+
+# Compiler and flags
+BUILD_DIR = build
+PREFIX ?= /usr/local
 
 .PHONY: all clean install uninstall
 
-all: $(TARGET)
+all: $(BUILD_DIR)
+	@cd $(BUILD_DIR) && cmake ..
+	@cd $(BUILD_DIR) && make
 
-$(TARGET): $(SOURCE)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SOURCE)
+$(BUILD_DIR):
+	@mkdir -p $(BUILD_DIR)
 
 clean:
-	rm -f $(TARGET)
+	@rm -rf $(BUILD_DIR)
 
-install: $(TARGET)
-	install -D -m 755 $(TARGET) /usr/local/bin/$(TARGET)
+install: all
+	@cd $(BUILD_DIR) && make install
 
 uninstall:
-	rm -f /usr/local/bin/$(TARGET) 
+	@cd $(BUILD_DIR) && xargs rm -f < install_manifest.txt
+
+# Development targets
+format:
+	@find src include -name '*.cpp' -o -name '*.hpp' | xargs clang-format -i
+
+lint:
+	@find src include -name '*.cpp' -o -name '*.hpp' | xargs clang-tidy
+
+.DEFAULT_GOAL := all 
