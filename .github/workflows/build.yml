@@ -1,0 +1,41 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            install: sudo apt-get update && sudo apt-get install -y cmake build-essential yt-dlp ffmpeg
+          - os: macos-latest
+            install: brew install cmake yt-dlp ffmpeg
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: ${{ matrix.install }}
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config Release
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: yt-snip-${{ matrix.os }}
+        path: |
+          ${{github.workspace}}/build/yt-snip*
+          LICENSE
+          README.md 

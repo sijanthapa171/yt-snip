@@ -1,0 +1,42 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on version tags
+
+jobs:
+  build:
+    name: Create Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential yt-dlp ffmpeg
+
+      - name: Build project
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          make
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            build/yt-snip
+            LICENSE
+            README.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
