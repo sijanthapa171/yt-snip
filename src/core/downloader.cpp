@@ -9,16 +9,42 @@
 
 namespace yt_snip {
 
-YouTubeDownloader::YouTubeDownloader() : outputDir(".") {}
+YouTubeDownloader::YouTubeDownloader() : outputDir(".") {
+    initializeDirectoryStructure();
+}
+
+void YouTubeDownloader::initializeDirectoryStructure() {
+    // Create main directories
+    ensureDirectoryExists(VIDEO_DIR);
+    ensureDirectoryExists(AUDIO_DIR);
+
+    // Create subdirectories
+    ensureDirectoryExists(std::string(VIDEO_DIR) + "/" + SINGLES_DIR);
+    ensureDirectoryExists(std::string(VIDEO_DIR) + "/" + PLAYLISTS_DIR);
+    ensureDirectoryExists(std::string(AUDIO_DIR) + "/" + SINGLES_DIR);
+    ensureDirectoryExists(std::string(AUDIO_DIR) + "/" + PLAYLISTS_DIR);
+}
+
+std::string YouTubeDownloader::getVideoOutputPath(const std::string& filename, bool isPlaylist) {
+    std::string subdir = isPlaylist ? PLAYLISTS_DIR : SINGLES_DIR;
+    return std::string(VIDEO_DIR) + "/" + subdir + "/" + filename;
+}
+
+std::string YouTubeDownloader::getAudioOutputPath(const std::string& filename, bool isPlaylist) {
+    std::string subdir = isPlaylist ? PLAYLISTS_DIR : SINGLES_DIR;
+    return std::string(AUDIO_DIR) + "/" + subdir + "/" + filename;
+}
 
 bool YouTubeDownloader::downloadVideo(const std::string& url) {
     std::string title = getVideoTitle(url);
-    return downloadMedia(url, sanitizeFilename(title), false, false);
+    std::string outputPath = getVideoOutputPath(sanitizeFilename(title), false);
+    return downloadMedia(url, outputPath, false, false);
 }
 
 bool YouTubeDownloader::downloadAudio(const std::string& url) {
     std::string title = getVideoTitle(url);
-    return downloadMedia(url, sanitizeFilename(title), true, false);
+    std::string outputPath = getAudioOutputPath(sanitizeFilename(title), false);
+    return downloadMedia(url, outputPath, true, false);
 }
 
 bool YouTubeDownloader::downloadPlaylistVideo(const std::string& url) {
@@ -30,10 +56,14 @@ bool YouTubeDownloader::downloadPlaylistAudio(const std::string& url) {
 }
 
 bool YouTubeDownloader::trimVideo(const std::string& url, const std::string& startTime, const std::string& endTime) {
+    std::string title = getVideoTitle(url);
+    std::string outputPath = getVideoOutputPath("trimmed_" + sanitizeFilename(title), false);
     return trimAndDownload(url, startTime, endTime, false);
 }
 
 bool YouTubeDownloader::trimAudio(const std::string& url, const std::string& startTime, const std::string& endTime) {
+    std::string title = getVideoTitle(url);
+    std::string outputPath = getAudioOutputPath("trimmed_" + sanitizeFilename(title), false);
     return trimAndDownload(url, startTime, endTime, true);
 }
 
@@ -193,7 +223,11 @@ bool YouTubeDownloader::downloadPlaylist(const std::string& url, bool audioOnly)
     std::string playlistTitle = getPlaylistTitle(url);
     std::cout << "Playlist: " << playlistTitle << std::endl;
     
-    ensureDirectoryExists(playlistTitle);
+    // Create playlist directory inside the appropriate category
+    std::string playlistDir = audioOnly ? 
+        getAudioOutputPath(playlistTitle, true) : 
+        getVideoOutputPath(playlistTitle, true);
+    ensureDirectoryExists(playlistDir);
     
     int totalCount = getPlaylistCount(url);
     if (totalCount == 0) {
@@ -218,7 +252,7 @@ bool YouTubeDownloader::downloadPlaylist(const std::string& url, bool audioOnly)
         std::string indexStr = std::to_string(i + 1);
         if (indexStr.length() == 1) indexStr = "0" + indexStr;
         
-        std::string outputName = playlistTitle + "/" + indexStr + "_" + sanitizeFilename(title);
+        std::string outputName = playlistDir + "/" + indexStr + "_" + sanitizeFilename(title);
         if (downloadMedia(urls[i], outputName, audioOnly, false)) {
             successCount++;
         }
