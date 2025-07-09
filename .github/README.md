@@ -28,7 +28,7 @@ yay -S yt-snip
 **From source:**
 ```bash
 # Clone the repository
-git clone https://github.com/melqtx/yt-snip.git
+git clone https://github.com/sijanthapa171/yt-snip.git
 cd yt-snip
 
 # Create build directory
@@ -91,7 +91,6 @@ Downloads are automatically organized in the following directory structure:
 
 - YouTube (youtube.com, youtu.be)
 - YouTube Music (music.youtube.com)
-
 
 ## License
 
