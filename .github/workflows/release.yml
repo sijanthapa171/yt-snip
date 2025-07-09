@@ -33,9 +33,17 @@ jobs:
           cmake ..
           make
 
+      - name: Copy required files
+        run: |
+          mkdir release
+          cp build/yt-snip release/
+          cp LICENSE release/ || touch release/LICENSE
+          cp README.md release/
+
       - name: Package artifacts
         run: |
-          tar -czf yt-snip-linux.tar.gz -C build yt-snip LICENSE README.md
+          cd release
+          tar -czf ../yt-snip-linux.tar.gz ./*
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -44,9 +52,6 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
-          files: |
-            yt-snip-linux.tar.gz
-            LICENSE
-            README.md
+          files: yt-snip-linux.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
