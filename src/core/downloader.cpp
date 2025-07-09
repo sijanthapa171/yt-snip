@@ -68,19 +68,49 @@ bool YouTubeDownloader::trimAudio(const std::string& url, const std::string& sta
 }
 
 int YouTubeDownloader::executeCommand(const std::string& command) {
-    return std::system(command.c_str());
+    // Redirect stderr to stdout to capture all output
+    std::string fullCommand = command + " 2>&1";
+    FILE* pipe = popen(fullCommand.c_str(), "r");
+    if (!pipe) {
+        std::cerr << "Error: Could not execute command" << std::endl;
+        return -1;
+    }
+
+    char buffer[128];
+    std::string output;
+    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+        output += buffer;
+        // Print output in real-time
+        std::cout << buffer;
+    }
+
+    int status = pclose(pipe);
+    if (status != 0) {
+        std::cerr << "Command failed with output:\n" << output << std::endl;
+    }
+    return status;
 }
 
 std::string YouTubeDownloader::executeCommandWithOutput(const std::string& command) {
+    // Redirect stderr to stdout to capture all output
+    std::string fullCommand = command + " 2>&1";
+    FILE* pipe = popen(fullCommand.c_str(), "r");
+    if (!pipe) {
+        std::cerr << "Error: Could not execute command" << std::endl;
+        return "";
+    }
+
     std::string result;
-    FILE* pipe = popen(command.c_str(), "r");
-    if (!pipe) return "";
-    
     char buffer[128];
     while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
         result += buffer;
     }
-    pclose(pipe);
+
+    int status = pclose(pipe);
+    if (status != 0) {
+        std::cerr << "Command failed with output:\n" << result << std::endl;
+    }
+
     return result;
 }
 
@@ -100,22 +130,33 @@ void YouTubeDownloader::printProgressBar(int current, int total, const std::stri
 }
 
 int YouTubeDownloader::getPlaylistCount(const std::string& url) {
+    std::cout << "Fetching playlist information..." << std::endl;
     std::string processedUrl = convertYouTubeMusicURL(url);
     std::string command = "yt-dlp --quiet --no-warnings --flat-playlist --dump-json \"" + processedUrl + "\" 2>/dev/null | wc -l";
+    std::cout << "Running command: " << command << std::endl;
     std::string output = executeCommandWithOutput(command);
+    std::cout << "Playlist count output: " << output << std::endl;
     
     try {
         return std::stoi(output);
     } catch (...) {
+        std::cerr << "Error: Could not parse playlist count" << std::endl;
         return 0;
     }
 }
 
 std::vector<std::string> YouTubeDownloader::getPlaylistUrls(const std::string& url) {
+    std::cout << "Fetching playlist URLs..." << std::endl;
     std::vector<std::string> urls;
     std::string processedUrl = convertYouTubeMusicURL(url);
     std::string command = "yt-dlp --quiet --no-warnings --flat-playlist --get-url \"" + processedUrl + "\" 2>/dev/null";
+    std::cout << "Running command: " << command << std::endl;
     std::string output = executeCommandWithOutput(command);
+    
+    if (output.empty()) {
+        std::cerr << "Error: No URLs found in playlist" << std::endl;
+        return urls;
+    }
     
     std::istringstream stream(output);
     std::string line;
@@ -124,25 +165,42 @@ std::vector<std::string> YouTubeDownloader::getPlaylistUrls(const std::string& u
             urls.push_back(line);
         }
     }
+    std::cout << "Found " << urls.size() << " URLs in playlist" << std::endl;
     return urls;
 }
 
 std::string YouTubeDownloader::getVideoTitle(const std::string& url) {
+    std::cout << "Fetching video title..." << std::endl;
     std::string command = "yt-dlp --quiet --no-warnings --get-title \"" + url + "\" 2>/dev/null";
+    std::cout << "Running command: " << command << std::endl;
     std::string title = executeCommandWithOutput(command);
+    
+    if (title.empty()) {
+        std::cerr << "Warning: Could not get video title, using default" << std::endl;
+        return "Unknown Title";
+    }
+    
     if (!title.empty() && title.back() == '\n') {
         title.pop_back();
     }
     if (title.length() > 60) {
         title = title.substr(0, 57) + "...";
     }
-    return title.empty() ? "Unknown Title" : title;
+    std::cout << "Got title: " << title << std::endl;
+    return title;
 }
 
 std::string YouTubeDownloader::getPlaylistTitle(const std::string& url) {
+    std::cout << "Fetching playlist title..." << std::endl;
     std::string processedUrl = convertYouTubeMusicURL(url);
     std::string command = "yt-dlp --quiet --no-warnings --print playlist_title \"" + processedUrl + "\" 2>/dev/null | head -1";
+    std::cout << "Running command: " << command << std::endl;
     std::string title = executeCommandWithOutput(command);
+    
+    if (title.empty()) {
+        std::cerr << "Warning: Could not get playlist title, using default" << std::endl;
+        return "Unknown_Playlist";
+    }
     
     title.erase(std::remove(title.begin(), title.end(), '\n'), title.end());
     title.erase(std::remove(title.begin(), title.end(), '\r'), title.end());
@@ -162,7 +220,8 @@ std::string YouTubeDownloader::getPlaylistTitle(const std::string& url) {
         }
     }
     
-    return title.empty() ? "Unknown_Playlist" : title;
+    std::cout << "Got playlist title: " << title << std::endl;
+    return title;
 }
 
 std::string YouTubeDownloader::sanitizeFilename(const std::string& filename) {
@@ -179,8 +238,17 @@ void YouTubeDownloader::cleanupFiles(const std::vector<std::string>& files) {
 }
 
 std::string YouTubeDownloader::convertYouTubeMusicURL(const std::string& url) {
+    std::cout << "Converting URL: " << url << std::endl;
+    // First, check if it's a YouTube Music URL
     std::regex music_pattern("music\\.youtube\\.com");
-    return std::regex_replace(url, music_pattern, "www.youtube.com");
+    if (!std::regex_search(url, music_pattern)) {
+        return url; // Not a YouTube Music URL, return as is
+    }
+    
+    // Convert to regular YouTube URL
+    std::string converted = std::regex_replace(url, music_pattern, "www.youtube.com");
+    std::cout << "Converted to: " << converted << std::endl;
+    return converted;
 }
 
 void YouTubeDownloader::ensureDirectoryExists(const std::string& dir) {
@@ -201,16 +269,17 @@ bool YouTubeDownloader::downloadMedia(const std::string& url, const std::string&
     }
     
     std::string outputPath = outputName + ".%(ext)s";
-    std::string command = "yt-dlp --quiet --no-warnings -o \"" + outputPath + "\" ";
+    std::string command = "yt-dlp ";
     if (audioOnly) {
         command += "-x --audio-format opus ";
     }
+    command += "-o \"" + outputPath + "\" ";
     command += "--no-playlist \"" + processedUrl + "\"";
 
-    std::cout << "Downloading " << (audioOnly ? "audio" : "video") << "..." << std::endl;
+    std::cout << "Running download command: " << command << std::endl;
     int result = executeCommand(command);
     if (result != 0) {
-        std::cerr << "Error downloading " << (audioOnly ? "audio" : "video") << std::endl;
+        std::cerr << "Error downloading " << (audioOnly ? "audio" : "video") << " (status " << result << ")" << std::endl;
         return false;
     }
     std::cout << "Download complete!" << std::endl;

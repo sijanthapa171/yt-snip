@@ -14,7 +14,12 @@ void printUsage() {
               << "\nExamples:\n"
               << "  yt-snip video \"https://youtube.com/watch?v=VIDEO_ID\"\n"
               << "  yt-snip trim-video \"https://youtube.com/watch?v=VIDEO_ID\" \"00:01:30\" \"00:03:45\"\n"
-              << "  yt-snip trim-audio \"https://youtube.com/watch?v=VIDEO_ID\" \"90\" \"180\"\n";
+              << "  yt-snip trim-audio \"https://youtube.com/watch?v=VIDEO_ID\" \"90\" \"180\"\n"
+              << "  yt-snip playlist-audio \"https://music.youtube.com/playlist?list=PLAYLIST_ID\"\n";
+}
+
+bool isPlaylistUrl(const std::string& url) {
+    return url.find("playlist?") != std::string::npos;
 }
 
 int main(int argc, char* argv[]) {
@@ -31,23 +36,53 @@ int main(int argc, char* argv[]) {
     try {
         bool success = false;
 
+        // Check if URL is a playlist and correct the command if needed
+        std::string urlStr(url);
+        bool isPlaylist = isPlaylistUrl(urlStr);
+
         if (command == "video") {
-            success = downloader.downloadVideo(std::string(url));
+            if (isPlaylist) {
+                std::cout << "URL is a playlist, using playlist-video command instead\n";
+                success = downloader.downloadPlaylistVideo(urlStr);
+            } else {
+                success = downloader.downloadVideo(urlStr);
+            }
         }
         else if (command == "audio") {
-            success = downloader.downloadAudio(std::string(url));
+            if (isPlaylist) {
+                std::cout << "URL is a playlist, using playlist-audio command instead\n";
+                success = downloader.downloadPlaylistAudio(urlStr);
+            } else {
+                success = downloader.downloadAudio(urlStr);
+            }
         }
         else if (command == "playlist-video") {
-            success = downloader.downloadPlaylistVideo(std::string(url));
+            if (!isPlaylist) {
+                std::cerr << "Error: Not a playlist URL\n";
+                return 1;
+            }
+            success = downloader.downloadPlaylistVideo(urlStr);
         }
         else if (command == "playlist-audio") {
-            success = downloader.downloadPlaylistAudio(std::string(url));
+            if (!isPlaylist) {
+                std::cerr << "Error: Not a playlist URL\n";
+                return 1;
+            }
+            success = downloader.downloadPlaylistAudio(urlStr);
         }
         else if (command == "trim-video" && argc == 5) {
-            success = downloader.trimVideo(std::string(url), argv[3], argv[4]);
+            if (isPlaylist) {
+                std::cerr << "Error: Cannot trim a playlist URL\n";
+                return 1;
+            }
+            success = downloader.trimVideo(urlStr, argv[3], argv[4]);
         }
         else if (command == "trim-audio" && argc == 5) {
-            success = downloader.trimAudio(std::string(url), argv[3], argv[4]);
+            if (isPlaylist) {
+                std::cerr << "Error: Cannot trim a playlist URL\n";
+                return 1;
+            }
+            success = downloader.trimAudio(urlStr, argv[3], argv[4]);
         }
         else {
             printUsage();
