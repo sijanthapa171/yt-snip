@@ -32,10 +32,11 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --config Release
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: yt-snip-${{ matrix.os }}
         path: |
           ${{github.workspace}}/build/yt-snip*
           LICENSE
-          README.md 
+          README.md
+        compression-level: 9 
